@@ -596,6 +596,58 @@ docker build -t express-template .
 docker run -d -p 3000:3000 --env-file .env express-template
 ```
 
+### Nginx 配置
+
+项目使用了 SSE（流式响应）和 WebSocket，部署时 Nginx 需要特殊配置：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # 通用 API 代理
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # SSE 流式接口（关键：禁用缓冲）
+    location /api/v1/chat/stream {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        
+        # SSE 必须配置
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 86400s;
+    }
+
+    # WebSocket
+    location /ws {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400s;
+    }
+}
+```
+
+**关键配置说明**：
+
+| 配置项 | 说明 | 用途 |
+|--------|------|------|
+| `proxy_buffering off` | 禁用响应缓冲 | SSE 必须，否则数据会被缓冲后一次性发送 |
+| `Upgrade/Connection` | 协议升级头 | WebSocket 必须 |
+| `proxy_read_timeout` | 长连接超时 | SSE/WS 都建议设置较长时间 |
+
 ## License
 
 ISC
