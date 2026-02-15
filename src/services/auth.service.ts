@@ -6,6 +6,45 @@ import { ErrorCode } from '../utils/response';
 import { RegisterInput, LoginInput } from '../validators/auth.validator';
 
 export class AuthService {
+  private async getUserPermissions(userId: number) {
+    const userWithRoles = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!userWithRoles) {
+      return { roles: [], permissions: [] };
+    }
+
+    const roles = userWithRoles.roles.map((ur) => ur.role.code);
+    const permissionSet = new Set<string>();
+
+    userWithRoles.roles.forEach((ur) => {
+      ur.role.permissions.forEach((rp) => {
+        permissionSet.add(rp.permission.code);
+      });
+    });
+
+    return {
+      roles,
+      permissions: Array.from(permissionSet),
+    };
+  }
+
   async register(data: RegisterInput) {
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
@@ -17,32 +56,46 @@ export class AuthService {
 
     const hashedPassword = await hashPassword(data.password);
 
+    const defaultRole = await prisma.role.findUnique({
+      where: { code: 'user' },
+    });
+
     const user = await prisma.user.create({
       data: {
         email: data.email,
         password: hashedPassword,
         nickname: data.nickname,
+        roles: defaultRole
+          ? {
+              create: { roleId: defaultRole.id },
+            }
+          : undefined,
       },
       select: {
         id: true,
         email: true,
         nickname: true,
         avatar: true,
-        role: true,
         createdAt: true,
       },
     });
 
+    const { roles, permissions } = await this.getUserPermissions(user.id);
+
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
+      roles,
+      permissions,
     };
 
     const tokens = generateTokens(payload);
 
     return {
-      user,
+      user: {
+        ...user,
+        roles,
+      },
       ...tokens,
     };
   }
@@ -66,10 +119,13 @@ export class AuthService {
       throw new AppError('账号或密码错误', 401, ErrorCode.UNAUTHORIZED);
     }
 
+    const { roles, permissions } = await this.getUserPermissions(user.id);
+
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
+      roles,
+      permissions,
     };
 
     const tokens = generateTokens(payload);
@@ -80,7 +136,7 @@ export class AuthService {
         email: user.email,
         nickname: user.nickname,
         avatar: user.avatar,
-        role: user.role,
+        roles,
         createdAt: user.createdAt,
       },
       ...tokens,
@@ -93,7 +149,6 @@ export class AuthService {
       select: {
         id: true,
         email: true,
-        role: true,
         status: true,
       },
     });
@@ -106,10 +161,13 @@ export class AuthService {
       throw new AppError('账号已被禁用', 403, ErrorCode.FORBIDDEN);
     }
 
+    const { roles, permissions } = await this.getUserPermissions(user.id);
+
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
+      roles,
+      permissions,
     };
 
     return generateTokens(payload);

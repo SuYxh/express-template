@@ -4,7 +4,8 @@ import { config } from '../config';
 export interface TokenPayload {
   userId: number;
   email: string;
-  role: 'USER' | 'ADMIN';
+  roles: string[];
+  permissions: string[];
 }
 
 export const generateAccessToken = (payload: TokenPayload): string => {

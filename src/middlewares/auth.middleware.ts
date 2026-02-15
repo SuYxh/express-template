@@ -1,11 +1,12 @@
-import { Response, NextFunction } from 'express';
-import { verifyAccessToken } from '../utils/token';
+import { Request, Response, NextFunction } from 'express';
+import { verifyAccessToken, TokenPayload } from '../utils/token';
 import { error, ErrorCode } from '../utils/response';
-import { AuthRequest } from '../types/express';
 
-export { AuthRequest };
+interface AuthenticatedRequest extends Request {
+  user?: TokenPayload;
+}
 
-export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -23,7 +24,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
   }
 };
 
-export const optionalAuthMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const optionalAuthMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (authHeader && authHeader.startsWith('Bearer ')) {

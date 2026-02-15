@@ -138,6 +138,7 @@ const options: swaggerJsdoc.Options = {
       { name: 'Auth', description: '认证相关接口' },
       { name: 'Upload', description: '文件上传接口' },
       { name: 'Chat', description: 'AI 对话接口' },
+      { name: 'Role', description: '角色权限管理' },
     ],
   },
   apis: ['./src/routes/*.ts'],

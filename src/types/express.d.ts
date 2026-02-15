@@ -1,6 +1,14 @@
-import { Request } from 'express';
-import { TokenPayload } from '../utils/token';
+export interface TokenPayload {
+  userId: number;
+  email: string;
+  roles: string[];
+  permissions: string[];
+}
 
-export interface AuthRequest extends Request {
-  user?: TokenPayload;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: TokenPayload;
+    }
+  }
 }
