@@ -22,6 +22,7 @@
 - JWT 双 Token 机制（access token + refresh token）
 - 密码加密（bcrypt）
 - Token 黑名单（Redis / 内存）
+- RBAC 权限管理（角色 + 权限）
 
 ### 🌐 API 能力
 - RESTful API 设计
@@ -96,6 +97,9 @@ pnpm prisma:push
 
 # 或使用迁移（生产环境推荐）
 pnpm prisma:migrate
+
+# 初始化权限、角色和测试用户
+pnpm prisma:seed
 ```
 
 ### 4. 启动服务
@@ -122,6 +126,7 @@ pnpm start
 | `pnpm prisma:generate` | 生成 Prisma Client |
 | `pnpm prisma:migrate` | 执行数据库迁移 |
 | `pnpm prisma:push` | 推送 Schema 到数据库 |
+| `pnpm prisma:seed` | 初始化权限、角色和测试用户 |
 | `pnpm prisma:studio` | 打开数据库可视化工具 |
 | `pnpm typecheck` | 类型检查 |
 
@@ -130,20 +135,24 @@ pnpm start
 ```
 express-template/
 ├── prisma/
-│   └── schema.prisma           # 数据库模型
+│   ├── schema.prisma           # 数据库模型
+│   └── seed.ts                 # 数据初始化脚本
+├── RBAC.md                     # RBAC 权限管理文档
 ├── src/
 │   ├── app.ts                  # 应用入口
 │   ├── config/                 # 配置文件
 │   │   ├── index.ts            # 环境配置
 │   │   ├── database.ts         # 数据库连接
 │   │   ├── redis.ts            # Redis 连接
-│   │   └── swagger.ts          # API 文档配置
+│   │   ├── swagger.ts          # API 文档配置
+│   │   └── permissions.ts      # 权限和角色定义
 │   ├── controllers/            # 控制器
 │   │   ├── auth.controller.ts  # 认证控制器
 │   │   ├── upload.controller.ts# 上传控制器
 │   │   └── chat.controller.ts  # AI 对话控制器
 │   ├── middlewares/            # 中间件
 │   │   ├── auth.middleware.ts  # JWT 认证
+│   │   ├── permission.middleware.ts # 权限检查
 │   │   ├── error.middleware.ts # 错误处理
 │   │   ├── validate.middleware.ts # 参数校验
 │   │   ├── rateLimit.middleware.ts # 请求限流
@@ -152,10 +161,12 @@ express-template/
 │   │   ├── index.ts
 │   │   ├── auth.routes.ts      # 认证路由
 │   │   ├── upload.routes.ts    # 上传路由
-│   │   └── chat.routes.ts      # AI 对话路由
+│   │   ├── chat.routes.ts      # AI 对话路由
+│   │   └── role.routes.ts      # 角色管理路由
 │   ├── services/               # 业务逻辑
 │   │   ├── auth.service.ts     # 认证服务
 │   │   ├── llm.service.ts      # LLM 服务
+│   │   ├── role.service.ts     # 角色服务
 │   │   └── websocket.service.ts# WebSocket 服务
 │   ├── types/                  # 类型定义
 │   │   └── express.d.ts
@@ -170,6 +181,7 @@ express-template/
 ├── public/                     # 静态资源
 │   ├── chat.html               # AI 对话测试页面
 │   ├── ws-test.html            # WebSocket 测试页面
+│   ├── rbac-test.html          # RBAC 权限测试页面
 │   └── ws-client.js            # WebSocket 客户端封装
 ├── uploads/                    # 上传文件目录
 ├── scripts/                    # 脚本
@@ -452,12 +464,70 @@ GET /api/v1/test/rate-limit
 ./scripts/test-rate-limit.sh
 ```
 
+### RBAC 权限管理
+
+系统实现了完整的 RBAC（基于角色的访问控制）权限管理，详细文档请参考 [RBAC.md](./RBAC.md)。
+
+#### 预置角色
+
+| 角色 | 说明 |
+|------|------|
+| `super_admin` | 超级管理员，拥有所有权限 |
+| `admin` | 管理员，拥有大部分管理权限 |
+| `developer` | 开发者，可创建和管理 API Key |
+| `pro` | Pro 用户，高级付费用户 |
+| `plus` | Plus 用户，基础付费用户 |
+| `user` | 普通用户，免费用户 |
+| `guest` | 访客，有限功能 |
+
+#### 权限检查中间件
+
+```typescript
+import { requirePermission, requireRole } from '@/middlewares/permission.middleware';
+import { PERMISSIONS } from '@/config/permissions';
+
+// 需要特定权限
+router.get('/users', authenticate, requirePermission(PERMISSIONS.USER_READ), getUsers);
+
+// 需要特定角色
+router.get('/admin', authenticate, requireRole('admin', 'super_admin'), getAdmin);
+```
+
+#### 角色管理 API
+
+| 路由 | 方法 | 说明 | 权限 |
+|------|------|------|------|
+| `/api/v1/roles` | GET | 获取角色列表 | `role:read` |
+| `/api/v1/roles/:id` | GET | 获取角色详情 | `role:read` |
+| `/api/v1/roles` | POST | 创建角色 | `role:create` |
+| `/api/v1/roles/:id` | PUT | 更新角色 | `role:update` |
+| `/api/v1/roles/:id` | DELETE | 删除角色 | `role:delete` |
+| `/api/v1/roles/permissions` | GET | 获取权限列表 | `permission:read` |
+| `/api/v1/roles/assign/:userId` | POST | 为用户分配角色 | `permission:assign` |
+
+#### 测试账号
+
+所有测试账号密码统一为：`Test123456`
+
+| 邮箱 | 角色 |
+|------|------|
+| superadmin1@example.com | 超级管理员 |
+| admin1@example.com | 管理员 |
+| developer1@example.com | 开发者 |
+| pro1@example.com | Pro 用户 |
+| plus1@example.com | Plus 用户 |
+| user1@example.com | 普通用户 |
+| guest1@example.com | 访客 |
+
+> 完整的 RBAC 文档（数据模型、权限清单、使用示例等）请参考 [RBAC.md](./RBAC.md)
+
 ## 测试页面
 
 | 页面 | 地址 | 说明 |
 |------|------|------|
-| AI 对话测试 | http://localhost:3000/public/chat.html | 测试 AI 对话功能 |
-| WebSocket 测试 | http://localhost:3000/public/ws-test.html | 测试 WebSocket 连接 |
+| AI 对话测试 | http://localhost:3000/chat.html | 测试 AI 对话功能 |
+| WebSocket 测试 | http://localhost:3000/ws-test.html | 测试 WebSocket 连接 |
+| RBAC 权限测试 | http://localhost:3000/rbac-test.html | 测试角色权限管理 |
 
 ## 如何添加新功能
 
