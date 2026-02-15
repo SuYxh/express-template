@@ -30,8 +30,10 @@ class WebSocketService {
         return;
       }
 
-      const payload = verifyAccessToken(token);
-      if (!payload) {
+      let payload;
+      try {
+        payload = verifyAccessToken(token);
+      } catch {
         ws.close(4002, 'Invalid token');
         return;
       }
