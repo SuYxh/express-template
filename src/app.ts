@@ -11,16 +11,26 @@ import prisma from './config/database';
 
 const app: Application = express();
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(cors({
   origin: config.cors.origin,
   credentials: true,
 }));
-app.use(compression());
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers.accept === 'text/event-stream') {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/public', express.static(path.join(__dirname, '../public')));
 
 app.get('/health', async (_req: Request, res: Response) => {
   let dbStatus = 'ok';

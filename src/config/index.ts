@@ -38,4 +38,10 @@ export const config = {
   log: {
     level: process.env.LOG_LEVEL || 'info',
   },
+
+  llm: {
+    apiKey: process.env.LLM_API_KEY || '',
+    baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
+    model: process.env.LLM_MODEL || 'deepseek-chat',
+  },
 };
