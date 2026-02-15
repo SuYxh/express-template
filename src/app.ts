@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import path from 'path';
 import http from 'http';
+import { apiReference } from '@scalar/express-api-reference';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware';
@@ -12,6 +13,7 @@ import prisma from './config/database';
 import { initRedis, isRedisConnected } from './config/redis';
 import { createRateLimiter } from './middlewares/rateLimit.middleware';
 import { wsService } from './services/websocket.service';
+import { swaggerSpec } from './config/swagger';
 
 const app: Application = express();
 const server = http.createServer(app);
@@ -36,6 +38,20 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/public', express.static(path.join(__dirname, '../public')));
+
+app.get('/openapi.json', (_req: Request, res: Response) => {
+  res.json(swaggerSpec);
+});
+
+app.use(
+  '/docs',
+  apiReference({
+    spec: {
+      content: swaggerSpec,
+    },
+    theme: 'purple',
+  })
+);
 
 app.get('/health', async (_req: Request, res: Response) => {
   let dbStatus = 'ok';
@@ -88,6 +104,7 @@ const start = async () => {
     server.listen(config.port, () => {
       logger.info(`Server is running on port ${config.port}`);
       logger.info(`Environment: ${config.env}`);
+      logger.info(`API Docs: http://localhost:${config.port}/docs`);
       logger.info(`WebSocket endpoint: ws://localhost:${config.port}/ws`);
     });
   } catch (err) {
