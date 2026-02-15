@@ -9,6 +9,7 @@ specifiers:
   '@types/jsonwebtoken': ^9.0.5
   '@types/multer': ^1.4.13
   '@types/node': ^20.11.16
+  '@types/ws': ^8.18.1
   bcrypt: ^5.1.1
   compression: ^1.7.4
   cors: ^2.8.5
@@ -27,6 +28,7 @@ specifiers:
   tsconfig-paths: ^4.2.0
   typescript: ^5.3.3
   winston: ^3.11.0
+  ws: ^8.19.0
   zod: ^3.25.76
 
 dependencies:
@@ -41,9 +43,10 @@ dependencies:
   ioredis: 5.9.0
   jsonwebtoken: 9.0.3
   multer: 1.4.5-lts.2
-  openai: 6.22.0_zod@3.25.76
+  openai: 6.22.0_ws@8.19.0+zod@3.25.76
   rate-limit-redis: 4.3.1_express-rate-limit@8.2.1
   winston: 3.19.0
+  ws: 8.19.0
   zod: 3.25.76
 
 devDependencies:
@@ -54,6 +57,7 @@ devDependencies:
   '@types/jsonwebtoken': 9.0.10
   '@types/multer': 1.4.13
   '@types/node': 20.19.31
+  '@types/ws': 8.18.1
   nodemon: 3.1.11
   prisma: 5.22.0
   ts-node: 10.9.2_4i45fidrl2lzsdpny3mena5bvm
@@ -296,6 +300,12 @@ packages:
   /@types/triple-beam/1.3.5:
     resolution: {integrity: sha512-6WaYesThRMCl19iryMYP7/x2OVgCtbIVflDGFpWnb9irXI3UjYE4AzmYuiUKY1AJstGijoY+MgUszMgRxIYTYw==}
     dev: false
+
+  /@types/ws/8.18.1:
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+    dependencies:
+      '@types/node': 20.19.31
+    dev: true
 
   /abbrev/1.1.1:
     resolution: {integrity: sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==}
@@ -1337,7 +1347,7 @@ packages:
       fn.name: 1.1.0
     dev: false
 
-  /openai/6.22.0_zod@3.25.76:
+  /openai/6.22.0_ws@8.19.0+zod@3.25.76:
     resolution: {integrity: sha512-7Yvy17F33Bi9RutWbsaYt5hJEEJ/krRPOrwan+f9aCPuMat1WVsb2VNSII5W1EksKT6fF69TG/xj4XzodK3JZw==}
     hasBin: true
     peerDependencies:
@@ -1349,6 +1359,7 @@ packages:
       zod:
         optional: true
     dependencies:
+      ws: 8.19.0
       zod: 3.25.76
     dev: false
 
@@ -1830,6 +1841,19 @@ packages:
 
   /wrappy/1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
+    dev: false
+
+  /ws/8.19.0:
+    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
     dev: false
 
   /xtend/4.0.2:

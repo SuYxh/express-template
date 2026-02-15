@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import path from 'path';
+import http from 'http';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware';
@@ -10,8 +11,10 @@ import routes from './routes';
 import prisma from './config/database';
 import { initRedis, isRedisConnected } from './config/redis';
 import { createRateLimiter } from './middlewares/rateLimit.middleware';
+import { wsService } from './services/websocket.service';
 
 const app: Application = express();
+const server = http.createServer(app);
 
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -48,6 +51,7 @@ app.get('/health', async (_req: Request, res: Response) => {
     services: {
       database: dbStatus,
       redis: isRedisConnected() ? 'ok' : 'disconnected',
+      websocket: 'ok',
     },
   });
 });
@@ -61,6 +65,8 @@ const start = async () => {
     await prisma.$connect();
     logger.info('Database connected');
 
+    wsService.init(server);
+
     const testRateLimit = createRateLimiter({
       windowMs: 60 * 1000,
       max: 3,
@@ -72,12 +78,17 @@ const start = async () => {
       res.json({ code: 0, message: 'success', data: { timestamp: new Date().toISOString() } });
     });
 
+    app.get('/api/v1/ws/online-users', (_req, res) => {
+      res.json({ code: 0, message: 'success', data: { users: wsService.getOnlineUsers() } });
+    });
+
     app.use(notFoundMiddleware);
     app.use(errorMiddleware);
 
-    app.listen(config.port, () => {
+    server.listen(config.port, () => {
       logger.info(`Server is running on port ${config.port}`);
       logger.info(`Environment: ${config.env}`);
+      logger.info(`WebSocket endpoint: ws://localhost:${config.port}/ws`);
     });
   } catch (err) {
     logger.error('Failed to start server:', err);
@@ -87,4 +98,5 @@ const start = async () => {
 
 start();
 
+export { wsService };
 export default app;

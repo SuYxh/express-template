@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 24px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { margin-bottom: 24px; color: #1a1a2e; }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .card h2 { font-size: 16px; margin-bottom: 12px; color: #333; }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status.OPEN { background: #dcfce7; color: #166534; }
+    .status.CLOSED { background: #fee2e2; color: #991b1b; }
+    .status.CONNECTING { background: #fef3c7; color: #92400e; }
+    .form-row { margin-bottom: 12px; }
+    .form-row label { display: block; margin-bottom: 4px; font-size: 14px; color: #666; }
+    .form-row input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-primary { background: #4f46e5; color: white; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-secondary { background: #6b7280; color: white; }
+    .btn-secondary:hover { background: #4b5563; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .log-container {
+      background: #1a1a2e;
+      color: #a3e635;
+      border-radius: 4px;
+      padding: 12px;
+      height: 300px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+    }
+    .log-entry { margin-bottom: 4px; line-height: 1.4; }
+    .log-entry.info { color: #60a5fa; }
+    .log-entry.error { color: #f87171; }
+    .log-entry.send { color: #fbbf24; }
+    .log-entry.receive { color: #a3e635; }
+    .log-entry.system { color: #c084fc; }
+    .online-users { margin-top: 12px; font-size: 14px; color: #666; }
+    .info-text { font-size: 12px; color: #888; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔌 WebSocket Test</h1>
+
+    <div class="card">
+      <h2>1. 登录获取 Token</h2>
+      <div class="form-row">
+        <label>Email</label>
+        <input type="email" id="email" value="test@example.com">
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <input type="password" id="password" value="Test123456">
+      </div>
+      <div class="btn-group">
+        <button class="btn-primary" onclick="login()">登录</button>
+        <span id="loginStatus" style="line-height: 32px; margin-left: 12px; font-size: 14px; color: #666;"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. WebSocket 连接</h2>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <span>状态：</span>
+        <span class="status CLOSED" id="wsStatus">CLOSED</span>
+        <span id="reconnectInfo" style="font-size: 12px; color: #888;"></span>
+      </div>
+      <div class="btn-group">
+        <button class="btn-primary" id="connectBtn" onclick="connect()" disabled>连接</button>
+        <button class="btn-danger" id="disconnectBtn" onclick="disconnect()" disabled>断开</button>
+      </div>
+      <div class="online-users" id="onlineUsers"></div>
+      <div class="info-text">
+        ✅ 自动心跳检测（30秒） ✅ 断线自动重连（最多10次）
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. 发送消息</h2>
+      <div class="form-row">
+        <label>消息类型（ping 返回 pong，其他返回 echo）</label>
+        <input type="text" id="msgType" value="test" placeholder="消息类型">
+      </div>
+      <div class="form-row">
+        <label>消息数据 (JSON)</label>
+        <input type="text" id="msgData" value='{"message": "Hello WebSocket!"}' placeholder='{"key": "value"}'>
+      </div>
+      <div class="btn-group">
+        <button class="btn-primary" id="sendBtn" onclick="sendMessage()" disabled>发送</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. 日志</h2>
+      <div class="btn-group" style="margin-bottom: 12px;">
+        <button class="btn-secondary" onclick="clearLogs()">清空日志</button>
+      </div>
+      <div class="log-container" id="logs"></div>
+    </div>
+  </div>
+
+  <script src="ws-client.js"></script>
+  <script>
+    let token = localStorage.getItem('token') || '';
+    let wsClient = null;
+
+    if (token) {
+      document.getElementById('loginStatus').textContent = '已有 Token';
+      document.getElementById('connectBtn').disabled = false;
+    }
+
+    function log(message, type = 'info') {
+      const logs = document.getElementById('logs');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const time = new Date().toLocaleTimeString();
+      entry.textContent = `[${time}] ${message}`;
+      logs.appendChild(entry);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('logs').innerHTML = '';
+    }
+
+    function updateStatus() {
+      const el = document.getElementById('wsStatus');
+      const state = wsClient ? wsClient.state : 'CLOSED';
+      el.className = `status ${state}`;
+      el.textContent = state;
+
+      const isConnected = state === 'OPEN';
+      document.getElementById('connectBtn').disabled = isConnected;
+      document.getElementById('disconnectBtn').disabled = !isConnected;
+      document.getElementById('sendBtn').disabled = !isConnected;
+    }
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (data.code === 0) {
+          token = data.data.accessToken;
+          localStorage.setItem('token', token);
+          document.getElementById('loginStatus').textContent = '登录成功！';
+          document.getElementById('connectBtn').disabled = false;
+          log('登录成功，获取到 Token', 'info');
+        } else {
+          log('登录失败: ' + data.message, 'error');
+        }
+      } catch (e) {
+        log('登录请求失败: ' + e.message, 'error');
+      }
+    }
+
+    function connect() {
+      if (!token) {
+        log('请先登录', 'error');
+        return;
+      }
+
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${location.host}/ws`;
+
+      wsClient = new WebSocketClient({
+        url: wsUrl,
+        token: token,
+        reconnect: true,
+        reconnectInterval: 3000,
+        reconnectMaxAttempts: 10,
+        heartbeatInterval: 30000,
+        heartbeatTimeout: 10000,
+
+        onOpen: () => {
+          log('🟢 WebSocket 连接成功', 'info');
+          updateStatus();
+          fetchOnlineUsers();
+          document.getElementById('reconnectInfo').textContent = '';
+        },
+
+        onClose: (event) => {
+          log(`🔴 WebSocket 断开 (code: ${event.code})`, 'info');
+          updateStatus();
+        },
+
+        onError: () => {
+          log('❌ WebSocket 错误', 'error');
+        },
+
+        onMessage: (data) => {
+          log('⬇️ [服务端] ' + JSON.stringify(data), 'receive');
+        },
+
+        onReconnect: (attempts) => {
+          log(`🔄 正在重连... (${attempts}/10)`, 'system');
+          document.getElementById('reconnectInfo').textContent = `重连中 ${attempts}/10`;
+        }
+      });
+
+      wsClient.connect();
+      log('正在连接 WebSocket...', 'info');
+      updateStatus();
+    }
+
+    function disconnect() {
+      if (wsClient) {
+        wsClient.close();
+        wsClient = null;
+        log('手动断开连接', 'info');
+        updateStatus();
+      }
+    }
+
+    function sendMessage() {
+      if (!wsClient || !wsClient.isConnected) {
+        log('WebSocket 未连接', 'error');
+        return;
+      }
+
+      const type = document.getElementById('msgType').value;
+      let data = {};
+      try {
+        data = JSON.parse(document.getElementById('msgData').value);
+      } catch (e) {
+        log('消息数据格式错误，请输入有效的 JSON', 'error');
+        return;
+      }
+
+      const message = { type, data };
+      wsClient.send(message);
+      log('⬆️ [客户端] ' + JSON.stringify(message), 'send');
+    }
+
+    async function fetchOnlineUsers() {
+      try {
+        const res = await fetch('/api/v1/ws/online-users');
+        const data = await res.json();
+        if (data.code === 0) {
+          const users = data.data.users;
+          document.getElementById('onlineUsers').textContent = 
+            `在线用户 ID: ${users.length > 0 ? users.join(', ') : '无'}`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    setInterval(() => {
+      if (wsClient && wsClient.isConnected) {
+        fetchOnlineUsers();
+      }
+    }, 5000);
+
+    setInterval(updateStatus, 1000);
+  </script>
+</body>
+</html>
