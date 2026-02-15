@@ -14,6 +14,7 @@
 - **日志**: Winston
 - **LLM**: OpenAI SDK（支持 DeepSeek 等兼容接口）
 - **实时通信**: WebSocket (ws)
+- **API 文档**: Scalar + swagger-jsdoc
 
 ## 内置功能
 
@@ -55,6 +56,11 @@
 - 健康检查接口
 - Docker 支持
 - PM2 生产部署配置
+
+### 📖 API 文档
+- Scalar（现代美观的 API 文档 UI）
+- OpenAPI 3.0 规范
+- 支持在线测试接口
 
 ## 环境要求
 
@@ -102,7 +108,9 @@ pnpm dev
 pnpm start
 ```
 
-服务启动后访问：http://localhost:3000
+服务启动后访问：
+- 服务地址：http://localhost:3000
+- API 文档：http://localhost:3000/docs
 
 ## 可用脚本
 
@@ -128,7 +136,8 @@ express-template/
 │   ├── config/                 # 配置文件
 │   │   ├── index.ts            # 环境配置
 │   │   ├── database.ts         # 数据库连接
-│   │   └── redis.ts            # Redis 连接
+│   │   ├── redis.ts            # Redis 连接
+│   │   └── swagger.ts          # API 文档配置
 │   ├── controllers/            # 控制器
 │   │   ├── auth.controller.ts  # 认证控制器
 │   │   ├── upload.controller.ts# 上传控制器
@@ -173,6 +182,52 @@ express-template/
 ```
 
 ## API 文档
+
+### 在线文档（Scalar）
+
+项目集成了 [Scalar](https://scalar.com/) 作为 API 文档 UI，提供现代美观的交互式文档。
+
+| 地址 | 说明 |
+|------|------|
+| http://localhost:3000/docs | API 文档页面 |
+| http://localhost:3000/openapi.json | OpenAPI JSON |
+
+**功能特性**：
+- 🎨 现代美观的紫色主题
+- 🔐 支持 Bearer Token 认证测试
+- 📝 完整的请求/响应示例
+- 🏷️ 按模块分组（Auth、Upload、Chat）
+- 🧪 可直接在页面上测试接口
+
+**为新接口添加文档**：
+
+在路由文件中添加 JSDoc 注释：
+
+```typescript
+/**
+ * @openapi
+ * /api/v1/xxx:
+ *   post:
+ *     tags: [TagName]
+ *     summary: 接口名称
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/XxxRequest'
+ *     responses:
+ *       200:
+ *         description: 成功
+ */
+router.post('/xxx', ...);
+```
+
+公共 Schema 定义在 `src/config/swagger.ts` 中，可通过 `$ref` 引用复用。
+
+---
 
 ### 健康检查
 
