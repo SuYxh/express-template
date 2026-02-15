@@ -14,6 +14,7 @@ specifiers:
   cors: ^2.8.5
   dotenv: ^16.4.1
   express: ^4.18.2
+  express-rate-limit: ^8.2.1
   helmet: ^7.1.0
   ioredis: ^5.3.2
   jsonwebtoken: ^9.0.2
@@ -21,6 +22,7 @@ specifiers:
   nodemon: ^3.0.3
   openai: ^6.22.0
   prisma: ^5.9.1
+  rate-limit-redis: ^4.3.1
   ts-node: ^10.9.2
   tsconfig-paths: ^4.2.0
   typescript: ^5.3.3
@@ -34,11 +36,13 @@ dependencies:
   cors: 2.8.6
   dotenv: 16.6.1
   express: 4.22.1
+  express-rate-limit: 8.2.1_express@4.22.1
   helmet: 7.2.0
   ioredis: 5.9.0
   jsonwebtoken: 9.0.3
   multer: 1.4.5-lts.2
   openai: 6.22.0_zod@3.25.76
+  rate-limit-redis: 4.3.1_express-rate-limit@8.2.1
   winston: 3.19.0
   zod: 3.25.76
 
@@ -719,6 +723,16 @@ packages:
     engines: {node: '>= 0.6'}
     dev: false
 
+  /express-rate-limit/8.2.1_express@4.22.1:
+    resolution: {integrity: sha512-PCZEIEIxqwhzw4KF0n7QF4QqruVTcF73O5kFKUnGOyjbCCgizBBiFaYpd/fnBLUMPw/BWw9OsiN7GgrNYr7j6g==}
+    engines: {node: '>= 16'}
+    peerDependencies:
+      express: '>= 4.11'
+    dependencies:
+      express: 4.22.1
+      ip-address: 10.0.1
+    dev: false
+
   /express/4.22.1:
     resolution: {integrity: sha512-F2X8g9P1X7uCPZMA3MVf9wcTqlyNp7IhH5qPCI0izhaOIYXaW9L535tGA3qmjRzpH+bZczqq7hVKxTR4NWnu+g==}
     engines: {node: '>= 0.10.0'}
@@ -969,6 +983,11 @@ packages:
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /ip-address/10.0.1:
+    resolution: {integrity: sha512-NWv9YLW4PoW2B7xtzaS3NCot75m6nK7Icdv0o3lfMceJVRfSoQwqD4wEH5rLwoKJwUiZ/rfpiVBhnaF0FK4HoA==}
+    engines: {node: '>= 12'}
     dev: false
 
   /ipaddr.js/1.9.1:
@@ -1388,6 +1407,15 @@ packages:
   /range-parser/1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
+    dev: false
+
+  /rate-limit-redis/4.3.1_express-rate-limit@8.2.1:
+    resolution: {integrity: sha512-+a1zU8+D7L8siDK9jb14refQXz60vq427VuiplgnaLk9B2LnvGe/APLTfhwb4uNIL7eWVknh8GnRp/unCj+lMA==}
+    engines: {node: '>= 16'}
+    peerDependencies:
+      express-rate-limit: '>= 6'
+    dependencies:
+      express-rate-limit: 8.2.1_express@4.22.1
     dev: false
 
   /raw-body/2.5.3:

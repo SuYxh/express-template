@@ -8,6 +8,8 @@ import { logger } from './utils/logger';
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware';
 import routes from './routes';
 import prisma from './config/database';
+import { initRedis, isRedisConnected } from './config/redis';
+import { createRateLimiter } from './middlewares/rateLimit.middleware';
 
 const app: Application = express();
 
@@ -45,19 +47,33 @@ app.get('/health', async (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     services: {
       database: dbStatus,
+      redis: isRedisConnected() ? 'ok' : 'disconnected',
     },
   });
 });
 
 app.use('/api/v1', routes);
 
-app.use(notFoundMiddleware);
-app.use(errorMiddleware);
-
 const start = async () => {
   try {
+    initRedis();
+
     await prisma.$connect();
     logger.info('Database connected');
+
+    const testRateLimit = createRateLimiter({
+      windowMs: 60 * 1000,
+      max: 3,
+      keyPrefix: 'rl:test',
+      message: '测试接口限流：1分钟最多3次',
+    });
+
+    app.get('/api/v1/test/rate-limit', testRateLimit, (_req, res) => {
+      res.json({ code: 0, message: 'success', data: { timestamp: new Date().toISOString() } });
+    });
+
+    app.use(notFoundMiddleware);
+    app.use(errorMiddleware);
 
     app.listen(config.port, () => {
       logger.info(`Server is running on port ${config.port}`);
